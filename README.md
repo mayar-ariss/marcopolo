@@ -15,6 +15,12 @@ Invoke it by name:
 
     marcopolo: design a rate limiter for a multi-tenant API
 
+Add `engineering:` or `research:` after the name to choose a mode.
+Engineering requires working code; research allows unverified theory and
+requires a literature search:
+
+    marcopolo research: abductive inference from sparse observations
+
 It also applies when you explicitly ask for a non-standard, novel, or
 first-principles alternative to the usual approach.
 
@@ -25,3 +31,7 @@ first-principles alternative to the usual approach.
   candidate over a range of input sizes and reports time, peak memory,
   speedup, and whether the outputs agree. Standard library only; run
   `python scripts/compare.py --help` for options.
+- `references/operators.md`: ways to break an assumption, each with an
+  established example and its risks.
+- `references/transfers.md`: structures from other fields that have working
+  implementations, with costs, plus transfers that do not hold up.
