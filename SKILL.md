@@ -28,17 +28,57 @@ Goal: find a solution that differs from the conventional one in mechanism
    borrowed model changes how the solution works and is formal enough to
    compute with. Drop analogies that only rename things. For each
    candidate, state what it adds over the closest prior work.
-6. **Select and build.** Pick the candidate with the best chance of beating
-   the baseline on the stated metric. Implement it fully using only real
+6. **Pre-commit.** Before running anything, write down the metric, the
+   input sizes, the threshold that counts as beating the baseline, and the
+   result that would rule each candidate out. Do not change these after
+   seeing results. If a change is unavoidable, report what changed and why.
+7. **Probe and select.** Prototype the two or three most promising
+   candidates with minimal code on small inputs: a few dozen lines and a
+   run of seconds each, not full implementations. Select by what the probes
+   show, not by how novel a candidate sounds, and record which probe
+   results decided it. If code cannot be run, say that the selection was
+   made by judgement alone.
+8. **Build.** Implement the selected candidate fully using only real
    libraries and APIs. Keep the code readable.
-7. **Verify.** Run it if tools allow. Test edge cases and compare against
-   the baseline on correctness and on the metric it was meant to improve.
-8. **Report.** State what is different, what was measured, where it breaks,
-   what it costs in maintainability, and how it relates to prior work.
+9. **Verify.** Compare against the baseline on correctness and on the
+   pre-committed metric, including edge cases: empty input, a single
+   element, duplicates, and worst-case distributions. For Python, use the
+   harness below; for other languages, write an equivalent harness that
+   reports the same columns.
+10. **Critique.** Have a reviewer that has not seen the reasoning behind
+    steps 5-9 try to break the result. Give it only the problem statement,
+    the pre-committed criteria, the code, and the measurements, and ask for
+    failing inputs, flawed measurements, and existing work that already
+    does the same thing. Use a separate agent if one is available;
+    otherwise do a separate pass that rereads only those materials. Fix or
+    report every finding.
+11. **Report.** State what is different, how it measured against the
+    pre-committed criteria, where it breaks, what it costs in
+    maintainability, how it relates to prior work, and what the critique
+    found.
+
+## Harness
+
+`scripts/compare.py` in this skill's folder runs a baseline and a candidate
+over a range of input sizes and reports median and best time, peak memory,
+speedup, and whether the outputs agree:
+
+    python scripts/compare.py \
+        --baseline baseline.py:solve \
+        --candidate candidate.py:solve \
+        --inputs gen.py:make_input \
+        --sizes 0,1,100,10000,1000000
+
+Each solution takes one input and returns a result. `make_input(n, seed)`
+returns one input of size n. Outputs are compared with `==` unless
+`--check file.py:check` is given, which is needed for floating-point
+tolerance or when several outputs are valid. Run with `--help` for all
+options. Paste the table into the report.
 
 ## Rules
 
-- Never invent libraries, APIs, citations, or results.
+- Never invent libraries, APIs, citations, or results. Every number in the
+  report comes from a run, not an estimate.
 - Claim novelty only relative to the prior work actually checked, and say
   what was checked.
 - If a candidate cannot be built or tested yet, it may be delivered as
