@@ -8,6 +8,20 @@ description: Explore unconventional designs for a coding, architecture, or resea
 Goal: find a solution that differs from the conventional one in mechanism
 (algorithm, data model, architecture), not in surface syntax, and that works.
 
+## Modes
+
+State the mode at the start. The user can set it with "marcopolo
+engineering:" or "marcopolo research:". Otherwise choose engineering when
+there is code to ship and research when the request is an open question or
+a research area.
+
+- **Engineering.** Working code is required. Step 4 is a quick check for
+  existing libraries and known algorithms. Theory-only output is not
+  allowed unless the user agrees.
+- **Research.** Step 4 is a full literature search that lists what was
+  searched. Theory-only output is allowed. The report separates verified
+  results from unverified ones.
+
 ## Process
 
 1. **Problem statement.** Restate the problem formally: inputs, outputs,
@@ -27,7 +41,10 @@ Goal: find a solution that differs from the conventional one in mechanism
    (biology, physics, linguistics, mathematics, etc.) only where the
    borrowed model changes how the solution works and is formal enough to
    compute with. Drop analogies that only rename things. For each
-   candidate, state what it adds over the closest prior work.
+   candidate, state what it adds over the closest prior work. See
+   `references/operators.md` for concrete ways to break an assumption and
+   `references/transfers.md` for borrowed structures that have working
+   implementations.
 6. **Pre-commit.** Before running anything, write down the metric, the
    input sizes, the threshold that counts as beating the baseline, and the
    result that would rule each candidate out. Do not change these after
@@ -44,7 +61,10 @@ Goal: find a solution that differs from the conventional one in mechanism
    pre-committed metric, including edge cases: empty input, a single
    element, duplicates, and worst-case distributions. For Python, use the
    harness below; for other languages, write an equivalent harness that
-   reports the same columns.
+   reports the same columns. If the candidate fails the pre-committed
+   criteria, record the cause as a new constraint. If the next-ranked
+   candidate's probe still looks viable under that constraint, build and
+   verify it once against the same criteria. Do not retry beyond that.
 10. **Critique.** Have a reviewer that has not seen the reasoning behind
     steps 5-9 try to break the result. Give it only the problem statement,
     the pre-committed criteria, the code, and the measurements, and ask for
@@ -82,8 +102,9 @@ options. Paste the table into the report.
 - Claim novelty only relative to the prior work actually checked, and say
   what was checked.
 - If a candidate cannot be built or tested yet, it may be delivered as
-  theory only. Label it "unverified", state the formal definitions it
-  depends on, and describe the experiment that would test it.
-- If no alternative beats the conventional solution, say so, deliver the
-  conventional solution, and describe the most promising alternative and
-  what would have to be true for it to win.
+  theory only, in research mode or with the user's agreement. Label it
+  "unverified", state the formal definitions it depends on, and describe
+  the experiment that would test it.
+- If no alternative beats the conventional solution after the one retry,
+  say so, deliver the conventional solution, and describe the most
+  promising alternative and what would have to be true for it to win.
