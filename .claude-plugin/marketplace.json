@@ -1,0 +1,15 @@
+{
+  "name": "marcopolo",
+  "description": "The marcopolo skill: unconventional designs that have to beat a strong baseline.",
+  "owner": {
+    "name": "Mayar Ariss",
+    "url": "https://github.com/mayar-ariss"
+  },
+  "plugins": [
+    {
+      "name": "marcopolo",
+      "source": "./",
+      "description": "Explore unconventional designs and keep only those that beat a strong baseline."
+    }
+  ]
+}
