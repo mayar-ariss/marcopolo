@@ -1,5 +1,8 @@
 # marcopolo
 
+**Unconventional designs that have to beat a strong baseline, or it tells you
+they don't.**
+
 A skill for exploring unconventional designs for coding, architecture, and
 research problems. It reduces a problem to its hard constraints, names the
 conventional solutions and the assumptions they rest on, and generates
@@ -8,6 +11,27 @@ failure criteria before running anything, probes the most promising
 candidates, builds the winner, benchmarks it against the baseline, and puts
 it through an independent critique. If no alternative wins, it says so and
 delivers the conventional solution.
+
+## Install
+
+**Claude Code**, as a plugin (updates with `claude plugin update`):
+
+    /plugin install marcopolo --marketplace mayar-ariss/marcopolo
+
+or from your shell:
+
+    claude plugin marketplace add mayar-ariss/marcopolo
+    claude plugin install marcopolo@marcopolo
+
+**Claude Code**, as a plain skill:
+
+    git clone https://github.com/mayar-ariss/marcopolo ~/.claude/skills/marcopolo
+
+**claude.ai**: download this repository as a zip and upload it as a custom
+skill.
+
+`SKILL.md` follows the Agent Skills format, so other agents that read that
+format can load it from a clone of this repository.
 
 ## Usage
 
@@ -24,6 +48,13 @@ requires a literature search:
 It also applies when you explicitly ask for a non-standard, novel, or
 first-principles alternative to the usual approach.
 
+## Example
+
+[`examples/counting-sort.md`](examples/counting-sort.md) is a complete run
+with real measurements. The candidate was 3.2x faster on the inputs it
+targeted and 2-5x slower on others, so the skill kept `sorted()` as the
+default and said exactly when the alternative pays off.
+
 ## Files
 
 - `SKILL.md`: the process and rules.
@@ -35,3 +66,5 @@ first-principles alternative to the usual approach.
   established example and its risks.
 - `references/transfers.md`: structures from other fields that have working
   implementations, with costs, plus transfers that do not hold up.
+- `examples/`: worked runs, including the measurements.
+- `.claude-plugin/`: plugin and marketplace manifests for Claude Code.
