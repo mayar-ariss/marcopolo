@@ -32,10 +32,17 @@ a research area.
    complexity bounds, state and mutation, failure modes. Separate real
    constraints from habits.
 3. **Baseline.** Name the 2-3 conventional solutions and the assumption each
-   one rests on. These are the comparison point, not the answer.
+   one rests on. These are the comparison point, not the answer. Use the
+   strongest standard version of each: an established library or a tuned
+   implementation, not a naive one written for the comparison.
 4. **Prior work.** Search the literature if tools allow. For each direction
    under consideration, name the closest existing work. If no search was
-   possible, say so and treat every novelty claim as unchecked.
+   possible, say so and treat every novelty claim as unchecked. Then decide
+   whether there is room to beat the baseline: is it already near a known
+   lower bound for these constraints, or does existing work already cover
+   the directions under consideration? If so, stop here: deliver the
+   conventional solution, give the evidence, and say what would have to
+   change for an alternative to be worth exploring.
 5. **Candidates.** Generate at least three alternatives, each breaking a
    different baseline assumption. Borrow structures from other fields
    (biology, physics, linguistics, mathematics, etc.) only where the
@@ -55,10 +62,14 @@ a research area.
    and why.
 7. **Probe and select.** Prototype the two or three most promising
    candidates with minimal code on small inputs: a few dozen lines and a
-   run of seconds each, not full implementations. Select by what the probes
-   show, not by how novel a candidate sounds, and record which probe
-   results decided it. If code cannot be run, say that the selection was
-   made by judgement alone.
+   run of seconds each, not full implementations. Run each probe at two or
+   three sizes spaced about 10x apart and compare how cost grows, not only
+   absolute times: a candidate that loses at small sizes but grows more
+   slowly may win at the pre-committed sizes. Extrapolate to those sizes
+   and label it as an extrapolation. Select by what the probes show, not by
+   how novel a candidate sounds, and record which probe results decided
+   it. If code cannot be run, say that the selection was made by judgement
+   alone.
 8. **Build.** Implement the selected candidate fully using only real
    libraries and APIs. Keep the code readable.
 9. **Verify.** Compare against the baseline on correctness and on the
@@ -74,9 +85,10 @@ a research area.
    verify it once against the same criteria. Do not retry beyond that.
 10. **Critique.** Have a reviewer that has not seen the reasoning behind
     steps 5-9 try to break the result. Give it only the problem statement,
-    the pre-committed criteria, the code, and the measurements, and ask for
-    failing inputs, flawed measurements, and existing work that already
-    does the same thing. Use a separate agent if one is available;
+    the pre-committed criteria, the candidate and baseline code, and the
+    measurements, and ask for failing inputs, flawed measurements, a
+    baseline that was weakened or misconfigured, and existing work that
+    already does the same thing. Use a separate agent if one is available;
     otherwise do a separate pass that rereads only those materials. Fix or
     report every finding.
 11. **Report.** State what is different, how it measured against the
