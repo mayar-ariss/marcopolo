@@ -47,8 +47,12 @@ a research area.
    implementations.
 6. **Pre-commit.** Before running anything, write down the metric, the
    input sizes, the threshold that counts as beating the baseline, and the
-   result that would rule each candidate out. Do not change these after
-   seeing results. If a change is unavoidable, report what changed and why.
+   result that would rule each candidate out. Include sizes at the scale
+   the problem actually runs at, not only small ones. Set the threshold
+   above the noise floor: run the baseline against itself in the harness
+   and treat any speedup within that spread as a tie. Do not change these
+   after seeing results. If a change is unavoidable, report what changed
+   and why.
 7. **Probe and select.** Prototype the two or three most promising
    candidates with minimal code on small inputs: a few dozen lines and a
    run of seconds each, not full implementations. Select by what the probes
@@ -61,7 +65,10 @@ a research area.
    pre-committed metric, including edge cases: empty input, a single
    element, duplicates, and worst-case distributions. For Python, use the
    harness below; for other languages, write an equivalent harness that
-   reports the same columns. If the candidate fails the pre-committed
+   reports the same columns. If the pre-committed metric is not time or
+   memory (throughput under contention, error rate, latency percentiles),
+   write a harness that measures that metric directly rather than
+   substituting run time. If the candidate fails the pre-committed
    criteria, record the cause as a new constraint. If the next-ranked
    candidate's probe still looks viable under that constraint, build and
    verify it once against the same criteria. Do not retry beyond that.
@@ -81,9 +88,12 @@ a research area.
 
 `scripts/compare.py` in this skill's folder runs a baseline and a candidate
 over a range of input sizes and reports median and best time, peak memory,
-speedup, and whether the outputs agree:
+speedup, and whether the outputs agree. Run it from the directory that holds
+the solution files, giving the script's full path inside this skill's
+folder, since the `file.py:function` arguments are resolved relative to the
+current directory:
 
-    python scripts/compare.py \
+    python /path/to/marcopolo/scripts/compare.py \
         --baseline baseline.py:solve \
         --candidate candidate.py:solve \
         --inputs gen.py:make_input \
@@ -92,8 +102,11 @@ speedup, and whether the outputs agree:
 Each solution takes one input and returns a result. `make_input(n, seed)`
 returns one input of size n. Outputs are compared with `==` unless
 `--check file.py:check` is given, which is needed for floating-point
-tolerance or when several outputs are valid. Run with `--help` for all
-options. Paste the table into the report.
+tolerance or when several outputs are valid. The exit status is 1 if the
+candidate fails, times out, or disagrees with the baseline. To measure the
+noise floor for step 6, pass the baseline as both `--baseline` and
+`--candidate`. Run with `--help` for all options. Paste the table into the
+report.
 
 ## Rules
 
