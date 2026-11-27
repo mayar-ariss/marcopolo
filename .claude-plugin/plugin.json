@@ -1,0 +1,13 @@
+{
+  "name": "marcopolo",
+  "displayName": "marcopolo",
+  "description": "Explore unconventional designs for coding, architecture, and research problems, and keep only those that beat a strong baseline under criteria fixed in advance.",
+  "author": {
+    "name": "Mayar Ariss",
+    "url": "https://github.com/mayar-ariss"
+  },
+  "homepage": "https://github.com/mayar-ariss/marcopolo",
+  "repository": "https://github.com/mayar-ariss/marcopolo",
+  "license": "MIT",
+  "keywords": ["design", "algorithms", "architecture", "research", "benchmarking", "first-principles"]
+}
