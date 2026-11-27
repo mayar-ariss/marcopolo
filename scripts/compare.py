@@ -14,18 +14,23 @@ Example:
 
 For each size it reports median and best wall time over the repeats, peak
 memory allocated through Python during one call (tracemalloc), the speedup
-of the candidate over the baseline, and whether the outputs agree.
+of the candidate over the baseline, and whether the outputs agree. Garbage is
+collected before each timed call. Memory is measured in a separate untimed
+call, because tracemalloc slows code down; if only that call times out, the
+timings are kept and the peak is reported as "timeout".
 
 Each call gets a fresh deep copy of the input, so an implementation that
 mutates its input cannot affect the other or later repeats. Copying is not
 included in the timings.
 
-Exit status is 1 if any outputs disagree or the candidate raises or times
-out. Baseline failures are reported in the table but do not fail the run.
+Exit status is 1 if any outputs disagree, the check function raises, or the
+candidate raises or times out. Baseline failures are reported in the table
+but do not fail the run.
 """
 
 import argparse
 import copy
+import gc
 import importlib
 import importlib.util
 import json
@@ -37,8 +42,12 @@ import time
 import tracemalloc
 
 
-class Timeout(Exception):
-    pass
+class Timeout(BaseException):
+    """Raised by the alarm. A BaseException, so that code under test with a
+    broad `except Exception` cannot swallow it and hide a timeout."""
+
+
+_loaded = {}
 
 
 def load(spec):
@@ -50,13 +59,21 @@ def load(spec):
         path = os.path.abspath(target)
         if not os.path.isfile(path):
             raise SystemExit(f"file not found: {path}")
-        mod_name = "_compare_" + os.path.splitext(os.path.basename(path))[0]
-        mod_spec = importlib.util.spec_from_file_location(mod_name, path)
-        if mod_spec is None or mod_spec.loader is None:
-            raise SystemExit(f"cannot load {path}")
-        module = importlib.util.module_from_spec(mod_spec)
-        sys.path.insert(0, os.path.dirname(path))
-        mod_spec.loader.exec_module(module)
+        # Unique per path, so baseline/solve.py and candidate/solve.py do not
+        # collide. Registered in sys.modules because dataclasses, pickle, and
+        # typing look modules up there.
+        mod_name = f"_compare_{len(_loaded)}_" + \
+            os.path.splitext(os.path.basename(path))[0]
+        module = _loaded.get(path)
+        if module is None:
+            mod_spec = importlib.util.spec_from_file_location(mod_name, path)
+            if mod_spec is None or mod_spec.loader is None:
+                raise SystemExit(f"cannot load {path}")
+            module = importlib.util.module_from_spec(mod_spec)
+            sys.modules[mod_name] = module
+            sys.path.insert(0, os.path.dirname(path))
+            mod_spec.loader.exec_module(module)
+            _loaded[path] = module
     else:
         module = importlib.import_module(target)
     try:
@@ -73,7 +90,7 @@ def timed_call(fn, arg, timeout):
     """Call fn(arg) and return (result, seconds). Timeout needs SIGALRM (Unix)."""
     use_alarm = bool(timeout) and hasattr(signal, "SIGALRM")
     if use_alarm:
-        signal.signal(signal.SIGALRM, _on_alarm)
+        previous = signal.signal(signal.SIGALRM, _on_alarm)
         signal.setitimer(signal.ITIMER_REAL, timeout)
     try:
         start = time.perf_counter()
@@ -82,23 +99,30 @@ def timed_call(fn, arg, timeout):
     finally:
         if use_alarm:
             signal.setitimer(signal.ITIMER_REAL, 0)
+            signal.signal(signal.SIGALRM, previous)
     return result, elapsed
 
 
 def measure(fn, inp, repeats, timeout):
-    """Time fn over several fresh copies of inp, then measure peak memory once."""
+    """Time fn over several fresh copies of inp, then measure peak memory once.
+
+    Returns peak as None if only the (slower) memory call timed out."""
     times = []
     result = None
     for _ in range(repeats):
         arg = copy.deepcopy(inp)
+        gc.collect()
         result, elapsed = timed_call(fn, arg, timeout)
         times.append(elapsed)
 
     arg = copy.deepcopy(inp)
+    gc.collect()
     tracemalloc.start()
     try:
         timed_call(fn, arg, timeout)
         _, peak = tracemalloc.get_traced_memory()
+    except Timeout:
+        peak = None
     finally:
         tracemalloc.stop()
     return result, times, peak
@@ -147,6 +171,7 @@ def run_one(fn, inp, repeats, timeout):
         "median_s": statistics.median(times),
         "best_s": min(times),
         "peak_bytes": peak,
+        "peak_status": "ok" if peak is not None else "timeout",
     }
 
 
@@ -186,11 +211,15 @@ def main():
         cand_out, cand = run_one(candidate, inp, args.repeats, args.timeout)
 
         if base["status"] == "ok" and cand["status"] == "ok":
-            if check:
-                agree = bool(check(copy.deepcopy(inp), base_out, cand_out))
-            else:
-                agree = default_equal(base_out, cand_out)
-            outputs = "agree" if agree else "DISAGREE"
+            try:
+                if check:
+                    agree = bool(check(copy.deepcopy(inp), base_out, cand_out))
+                else:
+                    agree = default_equal(base_out, cand_out)
+                outputs = "agree" if agree else "DISAGREE"
+            except Exception as exc:  # a broken check must not hide other sizes
+                agree = False
+                outputs = f"check error: {type(exc).__name__}: {exc}"
             failed |= not agree
         else:
             outputs = "not compared"
@@ -203,19 +232,26 @@ def main():
         rows.append({"n": n, "baseline": base, "candidate": cand,
                      "speedup": speedup, "outputs": outputs})
 
-    def cell(side, key, fmt):
-        return fmt(side[key]) if side["status"] == "ok" else side["status"]
+    def time_cell(side):
+        if side["status"] != "ok":
+            return side["status"]
+        return f"{fmt_time(side['median_s'])} ({fmt_time(side['best_s'])})"
 
-    print("| n | baseline median | candidate median | speedup | "
+    def peak_cell(side):
+        if side["status"] != "ok":
+            return side["status"]
+        if side["peak_bytes"] is None:
+            return side["peak_status"]
+        return fmt_bytes(side["peak_bytes"])
+
+    print("| n | baseline median (best) | candidate median (best) | speedup | "
           "baseline peak | candidate peak | outputs |")
     print("|---|---|---|---|---|---|---|")
     for r in rows:
         b, c = r["baseline"], r["candidate"]
         speed = f"{r['speedup']:.3g}x" if r["speedup"] else "-"
-        print(f"| {r['n']} | {cell(b, 'median_s', fmt_time)} | "
-              f"{cell(c, 'median_s', fmt_time)} | {speed} | "
-              f"{cell(b, 'peak_bytes', fmt_bytes)} | "
-              f"{cell(c, 'peak_bytes', fmt_bytes)} | {r['outputs']} |")
+        print(f"| {r['n']} | {time_cell(b)} | {time_cell(c)} | {speed} | "
+              f"{peak_cell(b)} | {peak_cell(c)} | {r['outputs']} |")
     print(f"\nrepeats={args.repeats} seed={args.seed} python={sys.version.split()[0]}"
           "  speedup = baseline median / candidate median")
 
